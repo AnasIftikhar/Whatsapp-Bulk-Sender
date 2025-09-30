@@ -23,26 +23,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 const inputEvent = new InputEvent('input', { bubbles: true });
                 messageBox.dispatchEvent(inputEvent);
 
-                console.log('Content script: Message typed, waiting 5 seconds before sending');
+                console.log('Content script: Message typed, waiting 3 seconds before sending');
 
-                // Wait 5 seconds then press Enter to send
+                // Wait 3 seconds then click send button
                 setTimeout(() => {
-                    console.log('Content script: Pressing Enter to send message');
+                    console.log('Content script: Looking for send button');
 
-                    const enterKeyDown = new KeyboardEvent('keydown', {
-                        key: 'Enter',
-                        code: 'Enter',
-                        keyCode: 13,
-                        which: 13,
-                        bubbles: true,
-                        cancelable: true
-                    });
+                    // Find send button with multiple selectors
+                    const sendBtn = document.querySelector('button[aria-label="Send"]') ||
+                        document.querySelector('span[data-icon="wds-ic-send-filled"]')?.parentElement?.parentElement ||
+                        Array.from(document.querySelectorAll('button')).find(btn =>
+                            btn.querySelector('span[data-icon="wds-ic-send-filled"]')
+                        );
 
-                    messageBox.dispatchEvent(enterKeyDown);
-                    console.log('Content script: Enter key dispatched, message should send');
-
-                    // Don't call sendResponse - avoid channel errors
-                }, 5000);
+                    if (sendBtn) {
+                        console.log('Content script: Send button found, clicking');
+                        sendBtn.click();
+                        console.log('Content script: Send button clicked');
+                    } else {
+                        console.error('Content script: Send button not found, trying Enter key');
+                        // Fallback to Enter key
+                        const enterEvent = new KeyboardEvent('keydown', {
+                            key: 'Enter',
+                            keyCode: 13,
+                            which: 13,
+                            bubbles: true
+                        });
+                        messageBox.dispatchEvent(enterEvent);
+                    }
+                }, 3000);
             }
         }, 1000);
 
