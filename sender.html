@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Bulk Sender</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            min-height: 100vh;
+            padding: 30px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #25D366;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f9f9f9;
+        }
+
+        .upload-area:hover {
+            border-color: #25D366;
+            background: #f0fff4;
+        }
+
+        .upload-area.has-file {
+            border-color: #25D366;
+            background: #e6f7ed;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #25D366;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .config-item label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .config-item input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .config-item input:focus {
+            outline: none;
+            border-color: #25D366;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #25D366;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #20ba5a;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #25D366;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #25D366;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .log-container {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .log-entry {
+            padding: 5px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .log-success { color: #4ade80; }
+        .log-error { color: #ef4444; }
+        .log-info { color: #60a5fa; }
+        .log-warning { color: #fbbf24; }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 WhatsApp Bulk Sender</h1>
+            <p>Send personalized messages to multiple WhatsApp numbers</p>
+        </div>
+
+        <div class="content">
+            <!-- File Upload -->
+            <div class="section">
+                <div class="section-title">📄 Step 1: Upload Excel File</div>
+                <div class="upload-area" id="uploadArea">
+                    <div class="file-icon">📂</div>
+                    <div><strong>Click to upload</strong> or drag & drop</div>
+                    <div style="font-size: 12px; color: #999; margin-top: 5px;">Excel files only (.xlsx, .xls)</div>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls">
+                </div>
+                <div id="fileInfo" class="hidden" style="margin-top: 10px; padding: 10px; background: #e6f7ed; border-radius: 6px; font-size: 13px;"></div>
+            </div>
+
+            <!-- Message -->
+            <div class="section">
+                <div class="section-title">✉️ Step 2: Compose Message</div>
+                <textarea id="messageText" placeholder="Type your message here...">Hello! This is a test message from WhatsApp Bulk Sender.</textarea>
+            </div>
+
+            <!-- Configuration -->
+            <div class="section">
+                <div class="section-title">⚙️ Step 3: Configure Settings</div>
+                <div class="config-grid">
+                    <div class="config-item">
+                        <label>Min Delay (seconds)</label>
+                        <input type="number" id="minDelay" value="60" min="10">
+                    </div>
+                    <div class="config-item">
+                        <label>Max Delay (seconds)</label>
+                        <input type="number" id="maxDelay" value="120" min="20">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="section">
+                <button class="btn btn-primary" id="startBtn" disabled>🚀 Start Sending</button>
+                <button class="btn btn-danger hidden" id="stopBtn">⏹️ Stop Sending</button>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats hidden" id="statsContainer">
+                <div class="stat-card">
+                    <div class="stat-value" id="statTotal">0</div>
+                    <div class="stat-label">Total</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statSent">0</div>
+                    <div class="stat-label">Sent</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statFailed">0</div>
+                    <div class="stat-label">Failed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statRemaining">0</div>
+                    <div class="stat-label">Remaining</div>
+                </div>
+            </div>
+
+            <div class="progress-bar hidden" id="progressContainer">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+
+            <!-- Activity Log -->
+            <div class="section">
+                <div class="section-title">📋 Activity Log</div>
+                <div class="log-container" id="logContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="xlsx.full.min.js"></script>
+    <script src="sender.js"></script>
+</body>
+</html>

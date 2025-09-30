@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "WhatsApp Bulk Sender",
+  "version": "1.0",
+  "description": "Send messages to WhatsApp numbers from Excel files",
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://web.whatsapp.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://web.whatsapp.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "WhatsApp Sender"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "sender.html"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+}
