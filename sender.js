@@ -53,7 +53,7 @@ el.stopBtn.addEventListener('click', stopSending);
 
 function handleFile(file) {
     const reader = new FileReader();
-    
+
     reader.onload = (e) => {
         try {
             const data = new Uint8Array(e.target.result);
@@ -83,12 +83,12 @@ function handleFile(file) {
 
             stats.total = phoneNumbers.length;
             stats.remaining = phoneNumbers.length;
-            
+
             el.uploadArea.classList.add('has-file');
             el.fileInfo.classList.remove('hidden');
             el.fileInfo.innerHTML = `<strong>✅ ${file.name}</strong><br>${phoneNumbers.length} phone numbers loaded`;
             el.startBtn.disabled = false;
-            
+
             addLog(`File loaded: ${phoneNumbers.length} numbers found`, 'success');
             console.log('Loaded phone numbers:', phoneNumbers);
 
@@ -142,7 +142,7 @@ async function startSending() {
 
         currentIndex = i;
         const phone = phoneNumbers[i];
-        
+
         addLog(`📤 Sending to +${phone}...`, 'info');
         console.log(`Attempting to send to: +${phone}`);
 
@@ -189,9 +189,9 @@ function stopSending() {
 async function sendMessage(phone, message) {
     return new Promise((resolve, reject) => {
         const url = `https://web.whatsapp.com/send/?phone=${phone}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`;
-        
+
         console.log(`Opening WhatsApp tab for +${phone}`);
-        
+
         chrome.tabs.create({ url: url, active: false }, (tab) => {
             const tabId = tab.id;
             let resolved = false;
@@ -207,18 +207,18 @@ async function sendMessage(phone, message) {
             chrome.tabs.onUpdated.addListener(function listener(updatedTabId, changeInfo) {
                 if (updatedTabId === tabId && changeInfo.status === 'complete') {
                     console.log(`Tab loaded for +${phone}, waiting for page to stabilize...`);
-                    
+
                     setTimeout(() => {
                         console.log(`Sending message to content script for +${phone}`);
-                        chrome.tabs.sendMessage(tabId, { 
-                            action: 'sendMessage', 
-                            message: message 
+                        chrome.tabs.sendMessage(tabId, {
+                            action: 'sendMessage',
+                            message: message
                         }, (response) => {
                             if (!resolved) {
                                 resolved = true;
                                 clearTimeout(timeout);
                                 chrome.tabs.onUpdated.removeListener(listener);
-                                
+
                                 setTimeout(() => {
                                     chrome.tabs.remove(tabId);
                                 }, 2000);
