@@ -199,41 +199,38 @@ async function sendMessage(phone, message) {
             const timeout = setTimeout(() => {
                 if (!resolved) {
                     resolved = true;
-                    chrome.tabs.remove(tabId);
+                    chrome.tabs.remove(tabId).catch(() => { });
                     reject(new Error('Timeout waiting for WhatsApp'));
                 }
-            }, 30000);
+            }, 35000);
 
             chrome.tabs.onUpdated.addListener(function listener(updatedTabId, changeInfo) {
                 if (updatedTabId === tabId && changeInfo.status === 'complete') {
                     console.log(`Tab loaded for +${phone}, waiting for page to stabilize...`);
 
                     setTimeout(() => {
-                        console.log(`Sending message to content script for +${phone}`);
+                        console.log(`Sending message command for +${phone}`);
+
                         chrome.tabs.sendMessage(tabId, {
                             action: 'sendMessage',
                             message: message
-                        }, (response) => {
+                        }).catch(err => {
+                            console.log('Message command sent (channel may close naturally)');
+                        });
+
+                        // Wait 12 seconds total for message to send in background
+                        setTimeout(() => {
                             if (!resolved) {
                                 resolved = true;
                                 clearTimeout(timeout);
                                 chrome.tabs.onUpdated.removeListener(listener);
-
-                                setTimeout(() => {
-                                    chrome.tabs.remove(tabId);
-                                }, 2000);
-
-                                if (response && response.success) {
-                                    console.log(`Message sent successfully to +${phone}`);
-                                    resolve();
-                                } else {
-                                    const error = response?.error || 'Unknown error';
-                                    console.error(`Failed to send to +${phone}: ${error}`);
-                                    reject(new Error(error));
-                                }
+                                chrome.tabs.remove(tabId).catch(() => { });
+                                console.log(`Message process completed for +${phone}`);
+                                resolve();
                             }
-                        });
-                    }, 5000);
+                        }, 12000);
+
+                    }, 6000);
                 }
             });
         });

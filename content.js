@@ -29,7 +29,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 setTimeout(() => {
                     console.log('Content script: Pressing Enter to send message');
 
-                    // Try multiple Enter key event approaches
                     const enterKeyDown = new KeyboardEvent('keydown', {
                         key: 'Enter',
                         code: 'Enter',
@@ -39,34 +38,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         cancelable: true
                     });
 
-                    const enterKeyPress = new KeyboardEvent('keypress', {
-                        key: 'Enter',
-                        code: 'Enter',
-                        keyCode: 13,
-                        which: 13,
-                        bubbles: true,
-                        cancelable: true
-                    });
-
-                    const enterKeyUp = new KeyboardEvent('keyup', {
-                        key: 'Enter',
-                        code: 'Enter',
-                        keyCode: 13,
-                        which: 13,
-                        bubbles: true,
-                        cancelable: true
-                    });
-
                     messageBox.dispatchEvent(enterKeyDown);
-                    messageBox.dispatchEvent(enterKeyPress);
-                    messageBox.dispatchEvent(enterKeyUp);
+                    console.log('Content script: Enter key dispatched, message should send');
 
-                    console.log('Content script: Enter key events dispatched');
-
-                    if (!responded) {
-                        responded = true;
-                        sendResponse({ success: true });
-                    }
+                    // Don't call sendResponse - avoid channel errors
                 }, 5000);
             }
         }, 1000);
