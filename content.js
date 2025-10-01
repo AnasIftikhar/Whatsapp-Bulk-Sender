@@ -13,15 +13,57 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 console.log('Content script: Message box found, typing message');
                 clearInterval(interval);
 
-                // Set the message
-                messageBox.focus();
+                if (messageBox) {
+                    console.log('Content script: Message box found, focusing and preparing to send');
+                    clearInterval(interval);
 
-                // Insert text properly
-                document.execCommand('insertText', false, request.message);
+                    // Focus the message box to activate it (WhatsApp needs this)
+                    messageBox.focus();
+                    messageBox.click();
 
-                // Trigger input event
-                const inputEvent = new InputEvent('input', { bubbles: true });
-                messageBox.dispatchEvent(inputEvent);
+                    // Trigger input event to tell WhatsApp the message is ready
+                    const inputEvent = new InputEvent('input', {
+                        bubbles: true,
+                        cancelable: true,
+                        composed: true
+                    });
+                    messageBox.dispatchEvent(inputEvent);
+
+                    console.log('Content script: Message box activated, waiting 3 seconds before sending');
+
+                    // Wait 3 seconds then click send button
+                    setTimeout(() => {
+                        console.log('Content script: Looking for send button');
+
+                        // Find send button with multiple selectors
+                        const sendBtn = document.querySelector('button[aria-label="Send"]') ||
+                            document.querySelector('span[data-icon="send"]')?.closest('button') ||
+                            document.querySelector('span[data-icon="wds-ic-send-filled"]')?.closest('button') ||
+                            Array.from(document.querySelectorAll('button')).find(btn =>
+                                btn.querySelector('span[data-icon="send"]') ||
+                                btn.querySelector('span[data-icon="wds-ic-send-filled"]')
+                            );
+
+                        if (sendBtn) {
+                            console.log('Content script: Send button found, clicking');
+                            sendBtn.click();
+                            console.log('Content script: Send button clicked');
+                        } else {
+                            console.error('Content script: Send button not found, trying Enter key');
+                            // Fallback to Enter key
+                            messageBox.focus();
+                            const enterEvent = new KeyboardEvent('keydown', {
+                                key: 'Enter',
+                                code: 'Enter',
+                                keyCode: 13,
+                                which: 13,
+                                bubbles: true,
+                                cancelable: true
+                            });
+                            messageBox.dispatchEvent(enterEvent);
+                        }
+                    }, 3000);
+                }
 
                 console.log('Content script: Message typed, waiting 3 seconds before sending');
 
