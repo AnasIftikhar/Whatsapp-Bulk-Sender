@@ -7,6 +7,10 @@ let statusColName = 'Status';
 let isProcessing = false;
 let currentIndex = 0;
 let stats = { total: 0, sent: 0, failed: 0, remaining: 0, skipped: 0 };
+let waitingForConfirmation = false;
+let confirmationResolver = null;
+let currentOpenTabId = null;
+let pausedState = null; // Store state when paused
 
 const el = {
     uploadArea: document.getElementById('uploadArea'),
@@ -18,6 +22,8 @@ const el = {
     sendLimit: document.getElementById('sendLimit'),
     startBtn: document.getElementById('startBtn'),
     stopBtn: document.getElementById('stopBtn'),
+    resumeBtn: document.getElementById('resumeBtn'),
+    confirmSentBtn: document.getElementById('confirmSentBtn'),
     downloadBtn: document.getElementById('downloadBtn'),
     statsContainer: document.getElementById('statsContainer'),
     statTotal: document.getElementById('statTotal'),
@@ -57,6 +63,8 @@ el.fileInput.addEventListener('change', (e) => {
 
 el.startBtn.addEventListener('click', startSending);
 el.stopBtn.addEventListener('click', stopSending);
+el.resumeBtn.addEventListener('click', resumeSending);
+el.confirmSentBtn.addEventListener('click', confirmMessageSent);
 el.downloadBtn.addEventListener('click', downloadUpdatedFile);
 
 function handleFile(file) {
@@ -138,227 +146,451 @@ function handleFile(file) {
 }
 
 async function startSending() {
-    if (isProcessing || phoneNumbers.length === 0) return;
+    async function startSending() {
+        if (isProcessing || phoneNumbers.length === 0) return;
 
-    const message = el.messageText.value.trim();
-    if (!message) {
-        alert('Please enter a message to send');
-        return;
-    }
+        // Clear any previous paused state when starting fresh
+        pausedState = null;
+        el.resumeBtn.classList.add('hidden');
 
-    const minDelay = parseInt(el.minDelay.value) * 1000;
-    const maxDelay = parseInt(el.maxDelay.value) * 1000;
-
-    if (minDelay >= maxDelay) {
-        alert('Min delay must be less than max delay');
-        return;
-    }
-
-    // Get send limit
-    const sendLimitValue = el.sendLimit.value.trim();
-    const sendLimit = sendLimitValue ? parseInt(sendLimitValue) : phoneNumbers.length;
-    const numbersToSend = phoneNumbers.slice(0, sendLimit);
-
-    isProcessing = true;
-    currentIndex = 0;
-    stats.sent = 0;
-    stats.failed = 0;
-    stats.remaining = numbersToSend.length;
-
-    el.startBtn.classList.add('hidden');
-    el.stopBtn.classList.remove('hidden');
-    el.statsContainer.classList.remove('hidden');
-    el.progressContainer.classList.remove('hidden');
-
-    addLog(`🚀 Starting bulk send (limit: ${numbersToSend.length} of ${phoneNumbers.length} unsent)...`, 'info');
-    console.log(`Starting bulk send: ${numbersToSend.length} numbers`);
-
-    for (let i = 0; i < numbersToSend.length; i++) {
-        if (!isProcessing) {
-            addLog('⏹️ Sending stopped by user', 'warning');
-            console.log('Process stopped by user');
-            break;
+        const message = el.messageText.value.trim();
+        // ... rest of the function stays the same
+        if (!message) {
+            alert('Please enter a message to send');
+            return;
         }
 
-        currentIndex = i;
-        const { phone, rowIndex } = numbersToSend[i];
+        const minDelay = parseInt(el.minDelay.value) * 1000;
+        const maxDelay = parseInt(el.maxDelay.value) * 1000;
 
-        addLog(`📤 Checking row ${rowIndex + 2} / queued ${i + 1} — sending to +${phone}...`, 'info');
-        console.log(`Attempting to send to: +${phone} (row ${rowIndex + 2})`);
-
-        try {
-            await sendMessage(phone, message);
-            allRows[rowIndex][statusColName] = 'Sent';
-            stats.sent++;
-            addLog(`✅ Message sent — row ${rowIndex + 2} — Status set to Sent`, 'success');
-            console.log(`Success: Message sent to +${phone} (row ${rowIndex + 2})`);
-        } catch (error) {
-            allRows[rowIndex][statusColName] = 'Failed';
-            stats.failed++;
-            addLog(`❌ Failed to send to +${phone} (row ${rowIndex + 2}): ${error.message}`, 'error');
-            console.error(`Failed for +${phone}:`, error);
+        if (minDelay >= maxDelay) {
+            alert('Min delay must be less than max delay');
+            return;
         }
 
-        stats.remaining = numbersToSend.length - (i + 1);
-        updateStats();
-        updateProgress(numbersToSend.length);
+        // Get send limit
+        const sendLimitValue = el.sendLimit.value.trim();
+        const sendLimit = sendLimitValue ? parseInt(sendLimitValue) : phoneNumbers.length;
+        const numbersToSend = phoneNumbers.slice(0, sendLimit);
 
-        if (i < numbersToSend.length - 1 && isProcessing) {
-            const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
-            const delaySec = Math.round(delay / 1000);
-            addLog(`⏳ Waiting ${delaySec} seconds before next message...`, 'info');
-            console.log(`Waiting ${delaySec} seconds...`);
-            await sleep(delay);
+        isProcessing = true;
+        currentIndex = 0;
+        stats.sent = 0;
+        stats.failed = 0;
+        stats.remaining = numbersToSend.length;
+
+        el.startBtn.classList.add('hidden');
+        el.stopBtn.classList.remove('hidden');
+        el.statsContainer.classList.remove('hidden');
+        el.progressContainer.classList.remove('hidden');
+
+        addLog(`🚀 Starting bulk send (limit: ${numbersToSend.length} of ${phoneNumbers.length} unsent)...`, 'info');
+        console.log(`Starting bulk send: ${numbersToSend.length} numbers`);
+
+        for (let i = 0; i < numbersToSend.length; i++) {
+            if (!isProcessing) {
+                addLog('⏹️ Sending stopped by user', 'warning');
+                console.log('Process stopped by user');
+                break;
+            }
+
+            currentIndex = i;
+            const { phone, rowIndex } = numbersToSend[i];
+
+            addLog(`📤 Checking row ${rowIndex + 2} / queued ${i + 1} — sending to +${phone}...`, 'info');
+            console.log(`Attempting to send to: +${phone} (row ${rowIndex + 2})`);
+
+            try {
+                await sendMessage(phone, message);
+                allRows[rowIndex][statusColName] = 'Sent';
+                stats.sent++;
+                addLog(`✅ Message sent — row ${rowIndex + 2} — Status set to Sent`, 'success');
+                console.log(`Success: Message sent to +${phone} (row ${rowIndex + 2})`);
+            } catch (error) {
+                allRows[rowIndex][statusColName] = 'Failed';
+                stats.failed++;
+                addLog(`❌ Failed to send to +${phone} (row ${rowIndex + 2}): ${error.message}`, 'error');
+                console.error(`Failed for +${phone}:`, error);
+            }
+
+            stats.remaining = numbersToSend.length - (i + 1);
+            updateStats();
+            updateProgress(numbersToSend.length);
+
+            if (i < numbersToSend.length - 1 && isProcessing) {
+                const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
+                const delaySec = Math.round(delay / 1000);
+                addLog(`⏳ Waiting ${delaySec} seconds before next message...`, 'info');
+                console.log(`Waiting ${delaySec} seconds...`);
+                await sleep(delay);
+            }
+        }
+
+        if (isProcessing) {
+            addLog(`✅ Bulk sending completed! Sent: ${stats.sent}, Failed: ${stats.failed}`, 'success');
+            console.log('Bulk sending completed');
+        }
+
+        isProcessing = false;
+        el.stopBtn.classList.add('hidden');
+        el.startBtn.classList.remove('hidden');
+        el.downloadBtn.classList.remove('hidden');
+    }
+
+    function stopSending() {
+        // Close current tab if open
+        if (currentOpenTabId) {
+            chrome.tabs.remove(currentOpenTabId).catch(() => { });
+            currentOpenTabId = null;
+        }
+
+        // Hide confirmation button if visible
+        if (waitingForConfirmation) {
+            el.confirmSentBtn.classList.add('hidden');
+            waitingForConfirmation = false;
+
+            // Reject the current confirmation to prevent hanging
+            if (confirmationResolver) {
+                confirmationResolver = null;
+            }
+        }
+
+        // Save current state for resume
+        pausedState = {
+            currentIndex: currentIndex,
+            stats: { ...stats },
+            message: el.messageText.value.trim(),
+            minDelay: parseInt(el.minDelay.value) * 1000,
+            maxDelay: parseInt(el.maxDelay.value) * 1000
+        };
+
+        isProcessing = false;
+
+        // Show resume button, hide stop button
+        el.stopBtn.classList.add('hidden');
+        el.resumeBtn.classList.remove('hidden');
+
+        addLog('⏹️ Sending paused. Click "Resume Sending" to continue.', 'warning');
+        console.log('Process paused by user. State saved for resume.');
+    }
+
+    async function resumeSending() {
+        if (!pausedState) {
+            alert('No paused session found. Please start a new sending process.');
+            return;
+        }
+
+        if (isProcessing) return;
+
+        const message = pausedState.message;
+        const minDelay = pausedState.minDelay;
+        const maxDelay = pausedState.maxDelay;
+
+        // Get send limit
+        const sendLimitValue = el.sendLimit.value.trim();
+        const sendLimit = sendLimitValue ? parseInt(sendLimitValue) : phoneNumbers.length;
+        const numbersToSend = phoneNumbers.slice(0, sendLimit);
+
+        // Resume from where we stopped
+        const startIndex = pausedState.currentIndex;
+
+        if (startIndex >= numbersToSend.length) {
+            alert('All messages in the queue have been processed.');
+            pausedState = null;
+            el.resumeBtn.classList.add('hidden');
+            return;
+        }
+
+        isProcessing = true;
+        currentIndex = startIndex;
+
+        // Restore stats
+        stats = { ...pausedState.stats };
+
+        el.resumeBtn.classList.add('hidden');
+        el.stopBtn.classList.remove('hidden');
+        el.statsContainer.classList.remove('hidden');
+        el.progressContainer.classList.remove('hidden');
+
+        addLog(`▶️ Resuming from message ${startIndex + 1} of ${numbersToSend.length}...`, 'info');
+        console.log(`Resuming bulk send from index ${startIndex}`);
+
+        for (let i = startIndex; i < numbersToSend.length; i++) {
+            if (!isProcessing) {
+                addLog('⏹️ Sending stopped by user', 'warning');
+                console.log('Process stopped by user');
+                break;
+            }
+
+            currentIndex = i;
+            const { phone, rowIndex } = numbersToSend[i];
+
+            addLog(`📤 Checking row ${rowIndex + 2} / queued ${i + 1} — sending to +${phone}...`, 'info');
+            console.log(`Attempting to send to: +${phone} (row ${rowIndex + 2})`);
+
+            try {
+                await sendMessage(phone, message);
+                allRows[rowIndex][statusColName] = 'Sent';
+                stats.sent++;
+                addLog(`✅ Message sent — row ${rowIndex + 2} — Status set to Sent`, 'success');
+                console.log(`Success: Message sent to +${phone} (row ${rowIndex + 2})`);
+            } catch (error) {
+                allRows[rowIndex][statusColName] = 'Failed';
+                stats.failed++;
+                addLog(`❌ Failed to send to +${phone} (row ${rowIndex + 2}): ${error.message}`, 'error');
+                console.error(`Failed for +${phone}:`, error);
+            }
+
+            stats.remaining = numbersToSend.length - (i + 1);
+            updateStats();
+            updateProgress(numbersToSend.length);
+
+            if (i < numbersToSend.length - 1 && isProcessing) {
+                const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
+                const delaySec = Math.round(delay / 1000);
+                addLog(`⏳ Waiting ${delaySec} seconds before next message...`, 'info');
+                console.log(`Waiting ${delaySec} seconds...`);
+                await sleep(delay);
+            }
+        }
+
+        if (isProcessing) {
+            addLog(`✅ Bulk sending completed! Sent: ${stats.sent}, Failed: ${stats.failed}`, 'success');
+            console.log('Bulk sending completed');
+            pausedState = null; // Clear paused state on completion
+        }
+
+        isProcessing = false;
+        el.stopBtn.classList.add('hidden');
+        el.startBtn.classList.remove('hidden');
+        el.resumeBtn.classList.add('hidden');
+        el.downloadBtn.classList.remove('hidden');
+    }
+
+    function confirmMessageSent() {
+        console.log('User confirmed message was sent');
+        addLog('✅ User confirmed message sent manually', 'success');
+
+        // Hide confirmation button
+        el.confirmSentBtn.classList.add('hidden');
+        waitingForConfirmation = false;
+
+        // Close the WhatsApp tab
+        if (currentOpenTabId) {
+            chrome.tabs.remove(currentOpenTabId).catch(() => { });
+            currentOpenTabId = null;
+        }
+
+        // Resolve the promise to continue to next number
+        if (confirmationResolver) {
+            confirmationResolver({ success: true, manual: true });
+            confirmationResolver = null;
         }
     }
 
-    if (isProcessing) {
-        addLog(`✅ Bulk sending completed! Sent: ${stats.sent}, Failed: ${stats.failed}`, 'success');
-        console.log('Bulk sending completed');
-    }
+    async function sendMessage(phone, message) {
+        return new Promise((resolve, reject) => {
+            const url = `https://web.whatsapp.com/send/?phone=${phone}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`;
 
-    isProcessing = false;
-    el.stopBtn.classList.add('hidden');
-    el.startBtn.classList.remove('hidden');
-    el.downloadBtn.classList.remove('hidden');
-}
+            console.log(`Opening WhatsApp tab for +${phone}`);
 
-function stopSending() {
-    isProcessing = false;
-    addLog('⏹️ Stopping process...', 'warning');
-    console.log('Stop requested by user');
-}
+            chrome.tabs.create({ url: url, active: true }, (tab) => {
+                const tabId = tab.id;
+                currentOpenTabId = tabId;
+                let resolved = false;
+                let notificationInterval = null;
 
-async function sendMessage(phone, message) {
-    return new Promise((resolve, reject) => {
-        const url = `https://web.whatsapp.com/send/?phone=${phone}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`;
+                const timeout = setTimeout(() => {
+                    if (!resolved && !waitingForConfirmation) {
+                        resolved = true;
+                        if (notificationInterval) clearInterval(notificationInterval);
+                        chrome.tabs.remove(tabId).catch(() => { });
+                        reject(new Error('Timeout waiting for WhatsApp'));
+                    }
+                }, 300000); // 5 minutes timeout
 
-        console.log(`Opening WhatsApp tab for +${phone}`);
+                // Store resolver for manual confirmation
+                confirmationResolver = (result) => {
+                    if (!resolved) {
+                        resolved = true;
+                        clearTimeout(timeout);
+                        if (notificationInterval) clearInterval(notificationInterval);
+                        chrome.tabs.onRemoved.removeListener(tabClosedListener);
+                        resolve(result);
+                    }
+                };
 
-        chrome.tabs.create({ url: url, active: false }, (tab) => {
-            const tabId = tab.id;
-            let resolved = false;
+                // Listen for tab closure
+                const tabClosedListener = (closedTabId) => {
+                    if (closedTabId === tabId) {
+                        console.log(`Tab closed for +${phone}`);
+                        currentOpenTabId = null;
 
-            const timeout = setTimeout(() => {
-                if (!resolved) {
-                    resolved = true;
-                    chrome.tabs.remove(tabId).catch(() => { });
-                    reject(new Error('Timeout waiting for WhatsApp'));
-                }
-            }, 35000);
+                        if (notificationInterval) clearInterval(notificationInterval);
 
-            chrome.tabs.onUpdated.addListener(function listener(updatedTabId, changeInfo) {
-                if (updatedTabId === tabId && changeInfo.status === 'complete') {
-                    console.log(`Tab loaded for +${phone}, waiting for page to stabilize...`);
+                        if (waitingForConfirmation) {
+                            // User closed tab while waiting - treat as failed
+                            waitingForConfirmation = false;
+                            el.confirmSentBtn.classList.add('hidden');
 
-                    setTimeout(() => {
-                        console.log(`Sending message command for +${phone}`);
-
-                        chrome.tabs.sendMessage(tabId, {
-                            action: 'sendMessage',
-                            message: message
-                        }).catch(err => {
-                            console.log('Message command sent (channel may close naturally)');
-                        });
-
-                        setTimeout(() => {
                             if (!resolved) {
                                 resolved = true;
                                 clearTimeout(timeout);
-                                chrome.tabs.onUpdated.removeListener(listener);
-                                chrome.tabs.remove(tabId).catch(() => { });
-                                console.log(`Message process completed for +${phone}`);
-                                resolve();
+                                chrome.tabs.onRemoved.removeListener(tabClosedListener);
+                                reject(new Error('Tab closed without confirmation'));
                             }
-                        }, 12000);
+                        }
+                    }
+                };
 
-                    }, 6000);
-                }
+                chrome.tabs.onRemoved.addListener(tabClosedListener);
+
+                chrome.tabs.onUpdated.addListener(function listener(updatedTabId, changeInfo) {
+                    if (updatedTabId === tabId && changeInfo.status === 'complete') {
+                        console.log(`Tab loaded for +${phone}, waiting for manual confirmation...`);
+
+                        setTimeout(() => {
+                            // Function to show notification
+                            const showNotification = () => {
+                                if (resolved) return;
+
+                                const currentTime = new Date().toLocaleString();
+
+                                chrome.notifications.create({
+                                    type: 'basic',
+                                    iconUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2325D366" width="100" height="100"/><text x="50" y="70" font-size="60" text-anchor="middle" fill="white">📱</text></svg>',
+                                    title: '⚠️ WhatsApp Reminder',
+                                    message: `Phone: +${phone}\nTime: ${currentTime}\n\n🔔 Send your message manually!\nThen click "I Sent the Message" button.`,
+                                    priority: 2,
+                                    requireInteraction: true
+                                });
+
+                                console.log(`Notification shown for +${phone} at ${currentTime}`);
+                            };
+
+                            // Show first notification immediately
+                            showNotification();
+
+                            // Show confirmation button
+                            waitingForConfirmation = true;
+                            el.confirmSentBtn.classList.remove('hidden');
+                            addLog(`⏸️ Waiting for you to send message to +${phone} and click confirmation...`, 'warning');
+
+                            // Set up repeating notifications every 10 seconds
+                            notificationInterval = setInterval(() => {
+                                if (resolved) {
+                                    clearInterval(notificationInterval);
+                                    return;
+                                }
+
+                                // Check if tab still exists
+                                chrome.tabs.get(tabId, (tab) => {
+                                    if (chrome.runtime.lastError || !tab) {
+                                        console.log(`Tab no longer exists`);
+                                        clearInterval(notificationInterval);
+                                        if (!resolved) {
+                                            resolved = true;
+                                            clearTimeout(timeout);
+                                            chrome.tabs.onUpdated.removeListener(listener);
+                                            chrome.tabs.onRemoved.removeListener(tabClosedListener);
+                                            reject(new Error('Tab closed'));
+                                        }
+                                    } else {
+                                        showNotification();
+                                    }
+                                });
+                            }, 10000); // 10 seconds
+
+                            chrome.tabs.onUpdated.removeListener(listener);
+
+                        }, 3000); // Wait 3 seconds for WhatsApp to fully load
+                    }
+                });
             });
         });
-    });
-}
-
-function downloadUpdatedFile() {
-    try {
-        // Reorder columns: ensure Status comes after PHONE
-        const columns = Object.keys(allRows[0]);
-        const phoneIndex = columns.indexOf(phoneColName);
-        const statusIndex = columns.indexOf(statusColName);
-
-        let orderedColumns;
-        if (statusIndex === -1 || statusIndex !== phoneIndex + 1) {
-            // Rebuild column order
-            orderedColumns = [...columns];
-            if (statusIndex !== -1) {
-                orderedColumns.splice(statusIndex, 1);
-            }
-            orderedColumns.splice(phoneIndex + 1, 0, statusColName);
-        } else {
-            orderedColumns = columns;
-        }
-
-        // Create ordered data
-        const orderedData = allRows.map(row => {
-            const orderedRow = {};
-            orderedColumns.forEach(col => {
-                orderedRow[col] = row[col] !== undefined ? row[col] : '';
-            });
-            return orderedRow;
-        });
-
-        // Create new worksheet
-        const newSheet = XLSX.utils.json_to_sheet(orderedData, { header: orderedColumns });
-
-        // Set column widths
-        const colWidths = orderedColumns.map(col => ({ wch: Math.max(col.length + 2, 15) }));
-        newSheet['!cols'] = colWidths;
-
-        // Create new workbook
-        const newWorkbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(newWorkbook, newSheet, workbookData.SheetNames[0]);
-
-        // Generate file
-        const wbout = XLSX.write(newWorkbook, { bookType: 'xlsx', type: 'array' });
-        const blob = new Blob([wbout], { type: 'application/octet-stream' });
-
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `updated_${Date.now()}.xlsx`;
-        a.click();
-        URL.revokeObjectURL(url);
-
-        addLog('💾 Updated Excel file downloaded', 'success');
-        console.log('File downloaded successfully');
-
-    } catch (error) {
-        addLog(`Error downloading file: ${error.message}`, 'error');
-        console.error('Download error:', error);
     }
-}
 
-function updateStats() {
-    el.statTotal.textContent = stats.total;
-    el.statSent.textContent = stats.sent;
-    el.statFailed.textContent = stats.failed;
-    el.statRemaining.textContent = stats.remaining;
-}
+    function downloadUpdatedFile() {
+        try {
+            // Reorder columns: ensure Status comes after PHONE
+            const columns = Object.keys(allRows[0]);
+            const phoneIndex = columns.indexOf(phoneColName);
+            const statusIndex = columns.indexOf(statusColName);
 
-function updateProgress(total) {
-    const progress = ((stats.sent + stats.failed) / total) * 100;
-    el.progressFill.style.width = `${progress}%`;
-}
+            let orderedColumns;
+            if (statusIndex === -1 || statusIndex !== phoneIndex + 1) {
+                // Rebuild column order
+                orderedColumns = [...columns];
+                if (statusIndex !== -1) {
+                    orderedColumns.splice(statusIndex, 1);
+                }
+                orderedColumns.splice(phoneIndex + 1, 0, statusColName);
+            } else {
+                orderedColumns = columns;
+            }
 
-function addLog(message, type = 'info') {
-    const timestamp = new Date().toLocaleTimeString();
-    const log = document.createElement('div');
-    log.className = `log-entry log-${type}`;
-    log.textContent = `[${timestamp}] ${message}`;
-    el.logContainer.appendChild(log);
-    el.logContainer.scrollTop = el.logContainer.scrollHeight;
-}
+            // Create ordered data
+            const orderedData = allRows.map(row => {
+                const orderedRow = {};
+                orderedColumns.forEach(col => {
+                    orderedRow[col] = row[col] !== undefined ? row[col] : '';
+                });
+                return orderedRow;
+            });
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+            // Create new worksheet
+            const newSheet = XLSX.utils.json_to_sheet(orderedData, { header: orderedColumns });
+
+            // Set column widths
+            const colWidths = orderedColumns.map(col => ({ wch: Math.max(col.length + 2, 15) }));
+            newSheet['!cols'] = colWidths;
+
+            // Create new workbook
+            const newWorkbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(newWorkbook, newSheet, workbookData.SheetNames[0]);
+
+            // Generate file
+            const wbout = XLSX.write(newWorkbook, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([wbout], { type: 'application/octet-stream' });
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `updated_${Date.now()}.xlsx`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            addLog('💾 Updated Excel file downloaded', 'success');
+            console.log('File downloaded successfully');
+
+        } catch (error) {
+            addLog(`Error downloading file: ${error.message}`, 'error');
+            console.error('Download error:', error);
+        }
+    }
+
+    function updateStats() {
+        el.statTotal.textContent = stats.total;
+        el.statSent.textContent = stats.sent;
+        el.statFailed.textContent = stats.failed;
+        el.statRemaining.textContent = stats.remaining;
+    }
+
+    function updateProgress(total) {
+        const progress = ((stats.sent + stats.failed) / total) * 100;
+        el.progressFill.style.width = `${progress}%`;
+    }
+
+    function addLog(message, type = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        const log = document.createElement('div');
+        log.className = `log-entry log-${type}`;
+        log.textContent = `[${timestamp}] ${message}`;
+        el.logContainer.appendChild(log);
+        el.logContainer.scrollTop = el.logContainer.scrollHeight;
+    }
+
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
 }

@@ -6,21 +6,11 @@
   "permissions": [
     "activeTab",
     "tabs",
-    "scripting"
+    "scripting",
+    "notifications"
   ],
   "host_permissions": [
     "https://web.whatsapp.com/*"
-  ],
-  "content_scripts": [
-    {
-      "matches": [
-        "https://web.whatsapp.com/*"
-      ],
-      "js": [
-        "content.js"
-      ],
-      "run_at": "document_idle"
-    }
   ],
   "action": {
     "default_title": "WhatsApp Sender"

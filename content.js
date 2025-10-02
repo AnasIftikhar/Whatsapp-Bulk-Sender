@@ -1,112 +1,104 @@
+// Listen for the initial setup message
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'sendMessage') {
-        console.log('Content script: Received sendMessage request');
+    if (request.action === 'monitorChat') {
+        console.log('Content script: Starting chat monitoring for message send detection');
 
-        let responded = false;
+        let checkInterval = null;
+        let messageSentNotified = false;
 
-        const interval = setInterval(() => {
-            const messageBox = document.querySelector('div[contenteditable="true"][data-lexical-editor="true"][data-tab="10"]') ||
-                document.querySelector('div[role="textbox"][contenteditable="true"][data-tab="10"]') ||
-                document.querySelector('div.lexical-rich-text-input div[contenteditable="true"]');
+        // Function to check if message was sent (look for checkmarks)
+        const checkMessageSent = () => {
+            if (messageSentNotified) return;
 
-            if (messageBox) {
-                console.log('Content script: Message box found, typing message');
-                clearInterval(interval);
+            // Look for the double checkmark icon (delivered status)
+            const deliveredIcon = document.querySelector('span[data-icon="msg-dblcheck"]');
 
-                if (messageBox) {
-                    console.log('Content script: Message box found, focusing and preparing to send');
-                    clearInterval(interval);
+            // Also check for single checkmark (sent but not delivered yet)
+            const sentIcon = document.querySelector('span[data-icon="msg-check"]');
 
-                    // Focus the message box to activate it (WhatsApp needs this)
-                    messageBox.focus();
-                    messageBox.click();
+            // Check for the time display in sent message structure
+            const lastMessageTime = document.querySelector('.x1n2onr6.x1n327nk .x13yyeie span[dir="auto"]');
 
-                    // Trigger input event to tell WhatsApp the message is ready
-                    const inputEvent = new InputEvent('input', {
-                        bubbles: true,
-                        cancelable: true,
-                        composed: true
-                    });
-                    messageBox.dispatchEvent(inputEvent);
+            if (deliveredIcon || sentIcon || lastMessageTime) {
+                console.log('Content script: Message sent/delivered detected!');
+                messageSentNotified = true;
 
-                    console.log('Content script: Message box activated, waiting 3 seconds before sending');
-
-                    // Wait 3 seconds then click send button
-                    setTimeout(() => {
-                        console.log('Content script: Looking for send button');
-
-                        // Find send button with multiple selectors
-                        const sendBtn = document.querySelector('button[aria-label="Send"]') ||
-                            document.querySelector('span[data-icon="send"]')?.closest('button') ||
-                            document.querySelector('span[data-icon="wds-ic-send-filled"]')?.closest('button') ||
-                            Array.from(document.querySelectorAll('button')).find(btn =>
-                                btn.querySelector('span[data-icon="send"]') ||
-                                btn.querySelector('span[data-icon="wds-ic-send-filled"]')
-                            );
-
-                        if (sendBtn) {
-                            console.log('Content script: Send button found, clicking');
-                            sendBtn.click();
-                            console.log('Content script: Send button clicked');
-                        } else {
-                            console.error('Content script: Send button not found, trying Enter key');
-                            // Fallback to Enter key
-                            messageBox.focus();
-                            const enterEvent = new KeyboardEvent('keydown', {
-                                key: 'Enter',
-                                code: 'Enter',
-                                keyCode: 13,
-                                which: 13,
-                                bubbles: true,
-                                cancelable: true
-                            });
-                            messageBox.dispatchEvent(enterEvent);
-                        }
-                    }, 3000);
+                if (checkInterval) {
+                    clearInterval(checkInterval);
                 }
 
-                console.log('Content script: Message typed, waiting 3 seconds before sending');
+                // Notify background script that message was sent
+                chrome.runtime.sendMessage({
+                    action: 'messageSent'
+                }).catch(() => {
+                    console.log('Message sent notification delivered');
+                });
+            }
+        };
 
-                // Wait 3 seconds then click send button
-                setTimeout(() => {
-                    console.log('Content script: Looking for send button');
+        // Wait for chat to load
+        const waitForChat = setInterval(() => {
+            const messageBox = document.querySelector('div[contenteditable="true"][data-lexical-editor="true"]') ||
+                document.querySelector('div[role="textbox"][contenteditable="true"]');
 
-                    // Find send button with multiple selectors
-                    const sendBtn = document.querySelector('button[aria-label="Send"]') ||
-                        document.querySelector('span[data-icon="wds-ic-send-filled"]')?.parentElement?.parentElement ||
-                        Array.from(document.querySelectorAll('button')).find(btn =>
-                            btn.querySelector('span[data-icon="wds-ic-send-filled"]')
-                        );
+            if (messageBox) {
+                clearInterval(waitForChat);
+                console.log('Content script: Chat loaded, monitoring for sent messages...');
 
-                    if (sendBtn) {
-                        console.log('Content script: Send button found, clicking');
-                        sendBtn.click();
-                        console.log('Content script: Send button clicked');
-                    } else {
-                        console.error('Content script: Send button not found, trying Enter key');
-                        // Fallback to Enter key
-                        const enterEvent = new KeyboardEvent('keydown', {
-                            key: 'Enter',
-                            keyCode: 13,
-                            which: 13,
-                            bubbles: true
-                        });
-                        messageBox.dispatchEvent(enterEvent);
+                // Start checking for sent message every 500ms
+                checkInterval = setInterval(checkMessageSent, 500);
+
+                // Also listen for Enter key press in message box
+                messageBox.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        console.log('Content script: Enter key detected, will check for sent status...');
+                        // Start aggressive checking after Enter
+                        setTimeout(() => {
+                            const fastCheck = setInterval(() => {
+                                checkMessageSent();
+                                if (messageSentNotified) {
+                                    clearInterval(fastCheck);
+                                }
+                            }, 200);
+
+                            // Stop fast checking after 5 seconds
+                            setTimeout(() => clearInterval(fastCheck), 5000);
+                        }, 100);
                     }
-                }, 3000);
+                });
+
+                // Listen for send button clicks
+                document.addEventListener('click', (e) => {
+                    const target = e.target.closest('button[aria-label*="Send"]') ||
+                        e.target.closest('span[data-icon="send"]')?.closest('button') ||
+                        e.target.closest('span[data-icon="wds-ic-send-filled"]')?.closest('button');
+
+                    if (target) {
+                        console.log('Content script: Send button clicked, will check for sent status...');
+                        // Start aggressive checking after click
+                        setTimeout(() => {
+                            const fastCheck = setInterval(() => {
+                                checkMessageSent();
+                                if (messageSentNotified) {
+                                    clearInterval(fastCheck);
+                                }
+                            }, 200);
+
+                            // Stop fast checking after 5 seconds
+                            setTimeout(() => clearInterval(fastCheck), 5000);
+                        }, 100);
+                    }
+                }, true);
+
+                sendResponse({ success: true });
             }
         }, 1000);
 
-        // Timeout after 20 seconds
+        // Timeout after 30 seconds
         setTimeout(() => {
-            clearInterval(interval);
-            if (!responded) {
-                responded = true;
-                console.error('Content script: Timeout - message box not found');
-                sendResponse({ success: false, error: 'Timeout waiting for WhatsApp to load' });
-            }
-        }, 20000);
+            clearInterval(waitForChat);
+        }, 30000);
 
-        return true; // Keep channel open for async response
+        return true; // Keep channel open
     }
 });

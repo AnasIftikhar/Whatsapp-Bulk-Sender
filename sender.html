@@ -251,6 +251,25 @@
         .hidden {
             display: none;
         }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            }
+
+            50% {
+                transform: scale(1.02);
+                box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+            }
+        }
+
+        .btn-confirm-highlight {
+            background: #10b981 !important;
+            animation: pulse 2s infinite;
+        }
     </style>
 </head>
 
@@ -347,6 +366,18 @@ Stop wasting billable hours on research. Start dialing. 📞🚀</textarea>
             <div class="section">
                 <button class="btn btn-primary" id="startBtn" disabled>🚀 Start Sending</button>
                 <button class="btn btn-danger hidden" id="stopBtn">⏹️ Stop Sending</button>
+
+                <!-- Resume Button - Shows after stopping -->
+                <button class="btn btn-primary hidden" id="resumeBtn" style="margin-top: 10px; background: #f59e0b;">
+                    ▶️ Resume Sending (Continue from where I stopped)
+                </button>
+
+                <!-- Manual Confirmation Button - Shows when waiting for user to send message -->
+                <button class="btn btn-primary hidden" id="confirmSentBtn"
+                    style="margin-top: 10px; background: #10b981; animation: pulse 2s infinite;">
+                    ✅ I Sent the Message - Continue to Next
+                </button>
+
                 <button class="btn btn-primary hidden" id="downloadBtn"
                     style="margin-top: 10px; background: #128C7E;">💾 Download
                     Updated Excel</button>
