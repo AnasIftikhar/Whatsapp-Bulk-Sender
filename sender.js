@@ -3,6 +3,7 @@ let allRows = [];
 let workbookData = null;
 let originalSheet = null;
 let phoneColName = null;
+let companyColName = null;  // Add this line
 let statusColName = 'Status';
 let isProcessing = false;
 let currentIndex = 0;
@@ -11,6 +12,108 @@ let waitingForConfirmation = false;
 let confirmationResolver = null;
 let currentOpenTabId = null;
 let pausedState = null;
+
+// Template Variants - Will loop through for each company
+const messageTemplates = [
+    // Variant 1: Simple & Direct
+    `Salam! 👋
+
+Quick question for {COMPANY_NAME} - are you spending too much time finding new customers?
+
+I can help. I give you ready-to-call leads with phone numbers and emails.
+
+✅ Any business: Doctors, IT, Construction, Real Estate, Lawyers, Online Shops
+✅ Any country: USA, UK, UAE, Canada, Australia + more
+✅ Complete details: Phone, Email, Address, Website
+✅ Excel file - easy to use
+
+FREE TEST: Tell me [Your Business Type + Country] and I'll send you 20 leads to try.
+
+Good prices for Pakistani businesses.
+
+leads.leadoxify.online`,
+
+    // Variant 2: Problem-Focused
+    `Hi there! 👋
+
+I noticed {COMPANY_NAME} and wanted to help you get more customers.
+
+The problem? Finding good leads takes too much time.
+
+The solution? I give you verified contact lists - people who actually need your service.
+
+📞 Phone numbers that work
+📧 Real email addresses
+🌍 Any country you want
+💼 Excel format - start calling today
+
+Want to try first? Send me [Your Industry + Country] → Get 20 FREE leads right now.
+
+Cheap packages. Fast delivery.
+
+leads.leadoxify.online`,
+
+    // Variant 3: Benefit-Driven
+    `Assalam o Alaikum! 👋
+
+{COMPANY_NAME} - imagine your sales team calling people who are already interested.
+
+That's what I provide:
+
+✔️ Real phone numbers and emails
+✔️ Businesses in your industry
+✔️ Any country: USA, UK, UAE, Canada, Australia
+✔️ Ready to download and use
+
+No more searching. Just calling and closing deals.
+
+FREE SAMPLE: Reply with [What You Sell + Which Country] and get 20 leads free.
+
+Easy prices for Pakistan.
+
+leads.leadoxify.online`,
+
+    // Variant 4: Conversational
+    `Salam! 👋
+
+Hope {COMPANY_NAME} is doing well!
+
+I help businesses like yours find new customers faster.
+
+Here's how: I give you contact lists with:
+- Phone numbers
+- Email addresses  
+- Complete business details
+- Any industry, any country
+
+You just download the Excel file and start calling. Simple.
+
+Try before you buy: Tell me [Your Business + Target Country] and I'll send 20 leads FREE.
+
+Good prices. Fast service. Real results.
+
+leads.leadoxify.online`,
+
+    // Variant 5: Results-Focused
+    `Hi! 👋
+
+{COMPANY_NAME} - want more sales calls that actually work?
+
+I provide qualified leads with complete contact info:
+
+🎯 Medical, IT, Construction, Real Estate, Legal, Online Business
+🌐 USA, UK, UAE, Canada, Australia + 50 countries
+📋 Phone + Email + Address + Website
+📊 Excel format - download and start today
+
+More leads = More calls = More customers 📞
+
+FREE PROOF: Send [Your Industry + Country] → Get 20 real prospects now.
+
+Affordable for Pakistani budgets.
+
+leads.leadoxify.online`
+];
 
 const el = {
     uploadArea: document.getElementById('uploadArea'),
@@ -79,6 +182,20 @@ function handleFile(file) {
             const columns = Object.keys(rows[0]);
             phoneColName = columns.find(col => col.toLowerCase() === 'phone');
 
+            // Check for Company Name column (optional - for personalization)
+            companyColName = columns.find(col =>
+                col.toLowerCase() === 'NAME'
+
+            );
+
+            // Log which column was detected
+            if (companyColName) {
+                addLog(`✅ Company name column detected: "${companyColName}"`, 'success');
+                console.log(`Company name column found: ${companyColName}`);
+            } else {
+                addLog(`⚠️ No company name column found. Using "there" as fallback.`, 'warning');
+                console.log('No company name column detected');
+            }
             if (!phoneColName) {
                 throw new Error('No "PHONE" column found');
             }
@@ -103,7 +220,14 @@ function handleFile(file) {
                 if (phone && status.toLowerCase() !== 'sent') {
                     const cleanPhone = String(phone).replace(/\D/g, '');
                     if (cleanPhone) {
-                        phoneNumbers.push({ phone: cleanPhone, rowIndex: idx });
+                        // Get company name for personalization (if column exists)
+                        const companyName = companyColName ? (row[companyColName] || 'there') : 'there';
+
+                        phoneNumbers.push({
+                            phone: cleanPhone,
+                            rowIndex: idx,
+                            companyName: companyName  // Store company name
+                        });
                     }
                 }
             });
@@ -148,12 +272,6 @@ async function startSending() {
     pausedState = null;
     el.resumeBtn.classList.add('hidden');
 
-    const message = el.messageText.value.trim();
-    if (!message) {
-        alert('Please enter a message to send');
-        return;
-    }
-
     const minDelay = parseInt(el.minDelay.value) * 1000;
     const maxDelay = parseInt(el.maxDelay.value) * 1000;
 
@@ -188,13 +306,20 @@ async function startSending() {
         }
 
         currentIndex = i;
-        const { phone, rowIndex } = numbersToSend[i];
+        const { phone, rowIndex, companyName } = numbersToSend[i];
 
-        addLog(`📤 Checking row ${rowIndex + 2} / queued ${i + 1} — sending to +${phone}...`, 'info');
-        console.log(`Attempting to send to: +${phone} (row ${rowIndex + 2})`);
+        // Select template variant using modulo for looping
+        const templateIndex = i % messageTemplates.length;  // Loop through templates
+        const selectedTemplate = messageTemplates[templateIndex];
+
+        // Personalize message with company name
+        const personalizedMessage = selectedTemplate.replace(/{COMPANY_NAME}/g, companyName);
+
+        addLog(`📤 Row ${rowIndex + 2} / queued ${i + 1} — Template ${templateIndex + 1} — sending to +${phone}...`, 'info');
+        console.log(`Attempting to send to: +${phone} (row ${rowIndex + 2}) using Template ${templateIndex + 1}`);
 
         try {
-            await sendMessage(phone, message);
+            await sendMessage(phone, personalizedMessage);  // Use personalized message
             allRows[rowIndex][statusColName] = 'Sent';
             stats.sent++;
             addLog(`✅ Message sent — row ${rowIndex + 2} — Status set to Sent`, 'success');

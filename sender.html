@@ -297,50 +297,51 @@
 
             <!-- Message -->
             <div class="section">
-                <div class="section-title">✉️ Step 2: Compose Message</div>
-                <textarea id="messageText" placeholder="Type your message here...">Assalam o Alaikum! 👋
-                
-Let me save your team 10-15 hours per week.
-
-I provide COMPLETE contact databases of businesses WORLDWIDE - so your team can focus on CALLING instead of searching.
-
-🎯 WHAT YOU GET:
-Ready-to-use contact lists from ANY industry:
-→ Medical: Dentists, Clinics, Hospitals, Mental Health
-→ IT: Software companies, Tech startups, IT services
-→ Construction: Contractors, Builders, Engineering firms
-→ Plus: Real Estate, Legal, Accounting, E-commerce, Manufacturing & MORE
-
-📊 COMPLETE DATA INCLUDES:
-✅ Business Name
-✅ Category/Industry
-✅ Full Address
-✅ Website URL
-✅ Phone Number
-✅ Email Address
-→ Clean Excel format (ready to import)
-
-💡 THE REAL VALUE:
-→ Your sales team spends time calling, not searching
-→ More conversations = More client meetings
-→ More meetings = More contracts signed
-→ Simple productivity math.
-
-🌍 WORLDWIDE COVERAGE:
-🇺🇸 USA | 🇨🇦 Canada | 🇬🇧 UK | 🇩🇪 Germany | 🇦🇪 UAE | 🇸🇦 Saudi | 🇦🇺 Australia | 🇫🇷 France | 🇪🇸 Spain | 🇮🇹 Italy | 🇳🇱 Netherlands | 🇸🇬 Singapore | 🇳🇿 New Zealand + 50+ more countries
-
-💰 BUILT FOR PAKISTANI BUDGETS:
-No $500 subscriptions. Affordable one-time packages.
-Full pricing: leads.leadoxify.online
-
-🎁 SEE QUALITY FIRST (FREE):
-I'll send 20 sample contacts from your target industry & country.
-No payment. No commitment. Just quality proof.
-
-Reply with: [Industry] + [Country]
-Example: "Medical billing USA" or "IT companies UK"
-
-Stop wasting billable hours on research. Start dialing. 📞🚀</textarea>
+                <div class="section-title">✉️ Step 2: Message Templates</div>
+                <div style="padding: 15px; background: #e6f7ed; border-radius: 8px; margin-bottom: 15px;">
+                    <strong>📝 Template System Active:</strong><br>
+                    <span style="font-size: 13px; color: #666;">
+                        5 message variants will automatically rotate for each company.<br>
+                        Use {COMPANY_NAME} in templates for personalization (optional).
+                    </span>
+                </div>
+                <details style="margin-bottom: 10px; cursor: pointer;">
+                    <summary style="padding: 10px; background: #f9f9f9; border-radius: 6px; font-weight: 600;">
+                        👁️ Preview All 5 Template Variants
+                    </summary>
+                    <div
+                        style="padding: 15px; background: #fafafa; border-radius: 6px; margin-top: 10px; max-height: 300px; overflow-y: auto; font-size: 13px; white-space: pre-wrap;">
+                        <div
+                            style="margin-bottom: 15px; padding: 10px; background: white; border-left: 3px solid #25D366;">
+                            <strong>Variant 1:</strong><br>${messageTemplates[0] ? messageTemplates[0].substring(0, 200)
+                            + '...' :
+                            'Loading...'}
+                        </div>
+                        <div
+                            style="margin-bottom: 15px; padding: 10px; background: white; border-left: 3px solid #128C7E;">
+                            <strong>Variant 2:</strong><br>${messageTemplates[1] ? messageTemplates[1].substring(0, 200)
+                            + '...' :
+                            'Loading...'}
+                        </div>
+                        <div
+                            style="margin-bottom: 15px; padding: 10px; background: white; border-left: 3px solid #25D366;">
+                            <strong>Variant 3:</strong><br>${messageTemplates[2] ? messageTemplates[2].substring(0, 200)
+                            + '...' :
+                            'Loading...'}
+                        </div>
+                        <div
+                            style="margin-bottom: 15px; padding: 10px; background: white; border-left: 3px solid #128C7E;">
+                            <strong>Variant 4:</strong><br>${messageTemplates[3] ? messageTemplates[3].substring(0, 200)
+                            + '...' :
+                            'Loading...'}
+                        </div>
+                        <div style="padding: 10px; background: white; border-left: 3px solid #25D366;">
+                            <strong>Variant 5:</strong><br>${messageTemplates[4] ? messageTemplates[4].substring(0, 200)
+                            + '...' :
+                            'Loading...'}
+                        </div>
+                    </div>
+                </details>
             </div>
 
             <!-- Configuration -->
