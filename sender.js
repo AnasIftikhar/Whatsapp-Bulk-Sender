@@ -184,8 +184,7 @@ function handleFile(file) {
 
             // Check for Company Name column (optional - for personalization)
             companyColName = columns.find(col =>
-                col.toLowerCase() === 'NAME'
-
+                col.toLowerCase() === 'name'  // lowercase 'name'
             );
 
             // Log which column was detected
