@@ -496,7 +496,7 @@ function confirmMessageSent() {
 
 async function sendMessage(phone, message) {
     return new Promise((resolve, reject) => {
-        const url = `https://web.whatsapp.com/send/?phone=${phone}&text=${encodeURIComponent(message)}&type=phone_number&app_absent=0`;
+        const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 
         console.log(`Opening WhatsApp tab for +${phone}`);
 
