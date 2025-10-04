@@ -15,102 +15,140 @@ let pausedState = null;
 
 // Template Variants - Will loop through for each company
 const messageTemplates = [
-    // Variant 1: Simple & Direct
-    `Salam! 👋
+    // Variant 1: Direct & Benefit-Focused
+    `Hey there!
 
-Quick question for {COMPANY_NAME} - are you spending too much time finding new customers?
+Quick question - could {COMPANY_NAME} use more qualified leads right now?
 
-I can help. I give you ready-to-call leads with phone numbers and emails.
+I pull together ready-to-use contact lists so you can skip the research and jump straight to calling.
 
-✅ Any business: Doctors, IT, Construction, Real Estate, Lawyers, Online Shops
-✅ Any country: USA, UK, UAE, Canada, Australia + more
-✅ Complete details: Phone, Email, Address, Website
-✅ Excel file - easy to use
+✅ You get (in Excel format):
+- Company Name
+- Category/Industry
+- Complete Address
+- Website
+- Phone Numbers
+- Email Addresses
 
-FREE TEST: Tell me [Your Business Type + Country] and I'll send you 20 leads to try.
+All verified & accurate - collected directly from official platforms, not scraped junk data.
 
-Good prices for Pakistani businesses.
+Here's the win:
+More leads = More conversations = More clients = More revenue for your business.
 
-leads.leadoxify.online`,
+Zero risk way to test it:
+Just tell me who you're targeting + which country, and I'll send you 5 free leads today.
 
-    // Variant 2: Problem-Focused
-    `Hi there! 👋
-
-I noticed {COMPANY_NAME} and wanted to help you get more customers.
-
-The problem? Finding good leads takes too much time.
-
-The solution? I give you verified contact lists - people who actually need your service.
-
-📞 Phone numbers that work
-📧 Real email addresses
-🌍 Any country you want
-💼 Excel format - start calling today
-
-Want to try first? Send me [Your Industry + Country] → Get 20 FREE leads right now.
-
-Cheap packages. Fast delivery.
+Fair pricing. Quick turnaround. No fluff.
 
 leads.leadoxify.online`,
 
-    // Variant 3: Benefit-Driven
-    `Assalam o Alaikum! 👋
+    // Variant 2: Problem-Solution Angle
+    `Hi!
 
-{COMPANY_NAME} - imagine your sales team calling people who are already interested.
+Spending too much time hunting for new clients?
 
-That's what I provide:
+I can help {COMPANY_NAME} with that. I build custom lead lists so your team can focus on selling, not searching.
 
-✔️ Real phone numbers and emails
-✔️ Businesses in your industry
-✔️ Any country: USA, UK, UAE, Canada, Australia
-✔️ Ready to download and use
+✅ You'll receive an Excel file with:
+- Company Name
+- Category
+- Full Address
+- Website URL
+- Phone Number
+- Email Address
 
-No more searching. Just calling and closing deals.
+Quality guaranteed - all info is verified and pulled from official business sources.
 
-FREE SAMPLE: Reply with [What You Sell + Which Country] and get 20 leads free.
+The opportunity:
+Convert just a few of these leads into paying clients and watch your revenue grow.
 
-Easy prices for Pakistan.
+Want to see it work first?
+Tell me [Your Target Client + Country] and I'll drop 5 sample leads in your inbox. Free.
 
-leads.leadoxify.online`,
-
-    // Variant 4: Conversational
-    `Salam! 👋
-
-Hope {COMPANY_NAME} is doing well!
-
-I help businesses like yours find new customers faster.
-
-Here's how: I give you contact lists with:
-- Phone numbers
-- Email addresses  
-- Complete business details
-- Any industry, any country
-
-You just download the Excel file and start calling. Simple.
-
-Try before you buy: Tell me [Your Business + Target Country] and I'll send 20 leads FREE.
-
-Good prices. Fast service. Real results.
+Good prices. Fast delivery. Real contacts.
 
 leads.leadoxify.online`,
 
-    // Variant 5: Results-Focused
-    `Hi! 👋
+    // Variant 3: Conversational & Simple
+    `Hey!
 
-{COMPANY_NAME} - want more sales calls that actually work?
+Hope business is good at {COMPANY_NAME}.
 
-I provide qualified leads with complete contact info:
+I do one thing really well - I find potential clients for you.
 
-🎯 Medical, IT, Construction, Real Estate, Legal, Online Business
-🌐 USA, UK, UAE, Canada, Australia + 50 countries
-📋 Phone + Email + Address + Website
-📊 Excel format - download and start today
+✅ Here's what you get (clean Excel file):
+- Company Name
+- Business Category
+- Address
+- Website
+- Phone
+- Email
 
-More leads = More calls = More customers 📞
+Why it works:
+All data is verified and collected from official platforms - so you're reaching real businesses with accurate info.
 
-FREE PROOF: Send [Your Industry + Country] → Get 20 real prospects now.
+The bottom line:
+Every lead is a chance to land a new client and boost your revenue.
 
-Affordable for Pakistani budgets.
+Try it free:
+Just message me [What you sell + Where you want clients] and I'll send 5 leads. No strings attached.
+
+Affordable. Fast. Actually works.
+
+leads.leadoxify.online`,
+
+    // Variant 4: Results-Oriented
+    `Hi there!
+
+Does {COMPANY_NAME} need more people to call this week?
+
+I specialize in building targeted lead lists that save you hours of research.
+
+✅ Each Excel file includes:
+- Company Name
+- Industry Category
+- Business Address
+- Website
+- Direct Phone Number
+- Email Address
+
+Verified & reliable - every detail is collected from official business platforms, not random databases.
+
+Why this matters:
+More quality leads in your pipeline means more potential clients and higher revenue for your business.
+
+Free sample to prove it:
+Tell me [Your ideal client + Country] and I'll send 5 quality leads today.
+
+Great rates. Quick turnaround. Verified contacts.
+
+leads.leadoxify.online`,
+
+    // Variant 5: Straight-Shooter Style
+    `Hey!
+
+Let me save {COMPANY_NAME} some time.
+
+Instead of searching for clients, what if they just showed up in your inbox?
+
+✅ I provide (downloadable Excel):
+- Company Name
+- Category
+- Complete Address
+- Website
+- Phone Number
+- Email Address
+
+The difference:
+All information is verified and sourced from official platforms - you get accurate data, not outdated junk.
+
+The real value:
+Turn these leads into paying clients and drive serious revenue growth for your business.
+
+Test drive it:
+Give me [Your target + Location] and I'll send 5 free leads so you can see the quality yourself.
+
+Fair pricing. No hassle. Real results.
 
 leads.leadoxify.online`
 ];
